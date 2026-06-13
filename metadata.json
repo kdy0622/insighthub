@@ -1,0 +1,6 @@
+{
+  "name": "USANA INSIGHT HUB",
+  "description": "강의, 세미나, 유튜브, 음성을 자동 분석하여 유사나 사업에 활용 가능한 지식 자산으로 바꿔주는 AI 비즈니스 플랫폼",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
