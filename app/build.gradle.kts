@@ -1,3 +1,24 @@
+import java.util.Base64
+import java.io.File
+
+// Automatically decode debug.keystore from debug.keystore.base64 if it is missing
+val rootDirectory = project.rootDir
+project.logger.lifecycle("DIAGNOSTIC: rootDirectory = ${rootDirectory.absolutePath}")
+val base64File = File(rootDirectory, "debug.keystore.base64")
+project.logger.lifecycle("DIAGNOSTIC: base64File exists = ${base64File.exists()}")
+val keystoreFile = File(rootDirectory, "debug.keystore")
+project.logger.lifecycle("DIAGNOSTIC: keystoreFile exists = ${keystoreFile.exists()}, length = ${keystoreFile.length()}")
+if (base64File.exists() && (!keystoreFile.exists() || keystoreFile.length() == 0L)) {
+    try {
+        val base64Content = base64File.readText().trim()
+        val decodedBytes = Base64.getDecoder().decode(base64Content)
+        keystoreFile.writeBytes(decodedBytes)
+        project.logger.lifecycle("Successfully decoded debug.keystore from debug.keystore.base64")
+    } catch (e: Exception) {
+        project.logger.error("Failed to decode debug.keystore from base64: ${e.message}", e)
+    }
+}
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
@@ -11,7 +32,7 @@ android {
   compileSdk = 35
 
   defaultConfig {
-    applicationId = "com.aistudio.usanacomp.qwvzk"
+    applicationId = "com.aistudio.usanainsighthub.xpktl"
     minSdk = 24
     targetSdk = 35
     versionCode = 1
@@ -27,12 +48,16 @@ android {
       storePassword = System.getenv("STORE_PASSWORD")
       keyAlias = "upload"
       keyPassword = System.getenv("KEY_PASSWORD")
+      enableV1Signing = true
+      enableV2Signing = true
     }
     create("debugConfig") {
       storeFile = file("${rootDir}/debug.keystore")
       storePassword = "android"
       keyAlias = "androiddebugkey"
       keyPassword = "android"
+      enableV1Signing = true
+      enableV2Signing = true
     }
   }
 

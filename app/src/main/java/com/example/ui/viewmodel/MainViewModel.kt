@@ -85,6 +85,7 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
     var inputTitle = MutableStateFlow("")
     var inputSource = MutableStateFlow("")
     var inputSpeaker = MutableStateFlow("")
+    var inputTranscript = MutableStateFlow("")
     var selectedFolderId = MutableStateFlow<Int?>(null)
     var selectedLanguage = MutableStateFlow("ko") // ko, en, ja, zh
     var isDialogueMode = MutableStateFlow(false)   // false = Lecture/Education, true = Dialogue/Consultation
@@ -119,6 +120,8 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
         prefs.edit().putString("regular_password", newPass.trim().lowercase()).apply()
     }
 
+    var isGeminiApiKeyActive = MutableStateFlow(com.example.data.api.StrategicAnalyst.isKeyValid())
+
     fun getSavedGeminiApiKey(context: Context): String {
         val prefs = context.getSharedPreferences("usana_prefs", Context.MODE_PRIVATE)
         return prefs.getString("gemini_api_key", "") ?: ""
@@ -129,6 +132,7 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
         prefs.edit().putString("gemini_api_key", key.trim()).apply()
         // Update StrategicAnalyst with the latest key
         com.example.data.api.StrategicAnalyst.customApiKey = key.trim()
+        isGeminiApiKeyActive.value = com.example.data.api.StrategicAnalyst.isKeyValid()
     }
 
     // --- Selected Detail Viewer Lecture ---
@@ -178,17 +182,25 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
         val rawTitle = inputTitle.value.trim()
         val source = inputSource.value.trim()
         val speaker = inputSpeaker.value.trim()
+        val customTranscript = inputTranscript.value.trim()
         val folderId = selectedFolderId.value
         val lang = selectedLanguage.value
 
-        if (source.isBlank()) {
-            Toast.makeText(context, "영상/음원 링크 또는 파일 경로를 입력하세요.", Toast.LENGTH_SHORT).show()
+        if (source.isBlank() && customTranscript.isBlank()) {
+            Toast.makeText(context, "영상/음원 링크, 파일 경로 또는 직접 입력 자막을 작성하세요.", Toast.LENGTH_SHORT).show()
             return
+        }
+
+        val finalSource = if (source.isBlank() && customTranscript.isNotBlank()) {
+            "직접 입력대본"
+        } else {
+            source
         }
 
         val title = if (rawTitle.isBlank()) {
             val dateStr = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.KOREA).format(Date())
             when {
+                customTranscript.isNotBlank() && source.isBlank() -> "직접 기입 스크립트 ($dateStr)"
                 source.contains("youtube") || source.contains("youtu.be") -> "유튜브 영상 분석 ($dateStr)"
                 source.contains("zoom.us") -> "Zoom 미팅 분석 ($dateStr)"
                 else -> "${if (isDialogueMode.value) "상담" else "강의"} 분석 자료 ($dateStr)"
@@ -219,11 +231,12 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
                 val resultLecture = StrategicAnalyst.analyzeLecture(
                     context = context,
                     title = title,
-                    source = source,
+                    source = finalSource,
                     speaker = speaker,
                     folderId = folderId,
                     targetLang = lang,
-                    isDialogue = isDialogueMode.value
+                    isDialogue = isDialogueMode.value,
+                    customTranscript = if (customTranscript.isNotBlank()) customTranscript else null
                 )
 
                 _transcriptionProgress.value = 0.95f
@@ -236,6 +249,7 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
                 inputTitle.value = ""
                 inputSource.value = ""
                 inputSpeaker.value = ""
+                inputTranscript.value = ""
                 
                 _transcriptionProgress.value = 1f
                 _isTranscribing.value = false
@@ -481,7 +495,7 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
                     
                     val fileUri: android.net.Uri = androidx.core.content.FileProvider.getUriForFile(
                         context, 
-                        "com.example.fileprovider", 
+                        "${context.packageName}.fileprovider", 
                         txtFile
                     )
                     
@@ -624,7 +638,7 @@ class MainViewModel(private val repository: AppRepository) : ViewModel() {
 
                     val fileUri: android.net.Uri = androidx.core.content.FileProvider.getUriForFile(
                         context, 
-                        "com.example.fileprovider", 
+                        "${context.packageName}.fileprovider", 
                         pdfFile
                     )
                     

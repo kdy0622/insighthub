@@ -1,0 +1,10 @@
+Testing transcript fetch for https://www.youtube.com/watch?v=l9F4gOXjjRk
+Querying oEmbed: https://www.youtube.com/oembed?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dl9F4gOXjjRk&format=json
+OEmbed Response code: 200
+OEmbed JSON response: {"title":"\uad8c\ub9ac\uc218\uc775 \ucc3d\ucd9c\uacfc \uc870\uc9c1 \uc131\uc7a5\uc744 \uc704\ud55c \ube44\uc988\ub2c8\uc2a4 \ub9c8\uc2a4\ud130\ud50c\ub79c (feat. \uc2a4\ub9c8\ud2b8 \uac74\uac15 \ucee8\uc124\ud305)","author_name":"\ub4dc\ub9ac\ubaacTV","author_url":"https://www.youtube.com/@Dream-On-tv","type":"video","height":113,"width":200,"version":"1.0","provider_name":"YouTube","provider_url":"https://www.youtube.com/","thumbnail_height":360,"thumbnail_width":480,"thumbnail_url":"https://i.ytimg.com/vi/l9F4gOXjjRk/hqdefault.jpg","html":"\u003ciframe width=\u0022200\u0022 height=\u0022113\u0022 src=\u0022https://www.youtube.com/embed/l9F4gOXjjRk?feature=oembed\u0022 frameborder=\u00220\u0022 allow=\u0022accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\u0022 referrerpolicy=\u0022strict-origin-when-cross-origin\u0022 allowfullscreen title=\u0022\uad8c\ub9ac\uc218\uc775 \ucc3d\ucd9c\uacfc \uc870\uc9c1 \uc131\uc7a5\uc744 \uc704\ud55c \ube44\uc988\ub2c8\uc2a4 \ub9c8\uc2a4\ud130\ud50c\ub79c (feat. \uc2a4\ub9c8\ud2b8 \uac74\uac15 \ucee8\uc124\ud305)\u0022\u003e\u003c/iframe\u003e"}
+Response code: 200
+HTML length: 1116505
+Index of playerCaptionsTracklistRenderer: -1
+playerCaptionsTracklistRenderer is NOT found in the WHOLE html.
+Index of captionTracks: -1
+captionTracks is also NOT found.

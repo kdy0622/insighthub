@@ -19,7 +19,7 @@ object StrategicAnalyst {
         return BuildConfig.GEMINI_API_KEY
     }
 
-    private fun isKeyValid(): Boolean {
+    fun isKeyValid(): Boolean {
         val key = getActiveApiKey()
         return key.isNotEmpty() && 
                !key.contains("PLACEHOLDER") && 
@@ -69,13 +69,16 @@ object StrategicAnalyst {
         speaker: String,
         folderId: Int?,
         targetLang: String = "ko",
-        isDialogue: Boolean = false
+        isDialogue: Boolean = false,
+        customTranscript: String? = null
     ): Lecture = withContext(Dispatchers.IO) {
         var finalTitle = title
         var finalSpeaker = speaker
 
         var realYoutubeTranscript: String? = null
-        if (source.contains("youtube.com") || source.contains("youtu.be")) {
+        if (!customTranscript.isNullOrBlank()) {
+            realYoutubeTranscript = customTranscript
+        } else if (source.contains("youtube.com") || source.contains("youtu.be")) {
             val details = fetchYoutubeVideoDetails(source)
             if (details != null) {
                 if (title.isBlank() || title.startsWith("유튜브 영상 분석")) {
@@ -89,12 +92,12 @@ object StrategicAnalyst {
         }
 
         if (finalSpeaker.isBlank()) {
-            finalSpeaker = if (isDialogue) "유사나 컨설턴트" else "전문 강사"
+            finalSpeaker = if (isDialogue) "전문 분석 파트너" else "전문 강사"
         }
         val seed = finalTitle.lowercase() + " " + source.lowercase()
 
-        val isLocalFile = source.startsWith("content://") || source.startsWith("file://") || 
-                (!source.startsWith("http://") && !source.startsWith("https://") && source.isNotEmpty())
+        val isLocalFile = (source.startsWith("content://") || source.startsWith("file://") || 
+                (!source.startsWith("http://") && !source.startsWith("https://") && source.isNotEmpty())) && source != "직접 입력대본"
         
         var base64Data: String? = null
         var fileMimeType: String? = null
@@ -246,7 +249,10 @@ object StrategicAnalyst {
                             You are an expert Speech-to-Text transcriber. 
                             Simulate a highly detailed, realistic, professional multi-speaker conversation/counselling/consultation script (approx 400-600 words) with timeline markers like [01:10].
                             Title of interaction: "$finalTitle" (Source/Link: $source) involving consultant/leader "$finalSpeaker" and client/prospect/partner.
-                            Make the conversation revolve around USANA product counselling, business vision sharing, objection handling, or team building in a very natural spoken Korean.
+                            
+                            Instructions:
+                            - Make the conversation highly faithful to the actual topic, theme, and key insights of "$finalTitle" (e.g., general economics, self-improvement, tech, scale, micro-habits, or business planning).
+                            - Do NOT force a USANA connection if the original topic is unrelated (e.g., general macroeconomics, financial market cycles). Only revolve around USANA products (like health supplements), business visions, objection handling, or team building IF AND ONLY IF the topic naturally relates to wellness, healthcare, network marketing, subscription assets, or direct-selling dynamics. Otherwise, focus solely on conveying the raw topic's insights in a very realistic spoken Korean.
                             
                             CRITICAL RULE:
                             - Outputs must contains ONLY the actual spoken-word dialogue transcript text.
@@ -301,48 +307,56 @@ object StrategicAnalyst {
                 
                 val summary = callGemini(apiKey, promptSummary)
                 
-                // Prompt 3: Usana Strategic Report with NotebookLM & Business playbooks
+                // Prompt 3: Strategic Report with natural mapping/adaptation
                 val promptStrategy = """
-                    You are a world-class Premium direct sales (Multi-Level Marketing) consultant specializing in Usana Health Sciences (유사나 헬스사이언스).
+                    You are an expert business analyst and strategic growth consultant.
                     Analyze the following transcript:
                     $transcript
                     
-                    Create a comprehensive, strategic business analysis report that translates this specific topic into USANA business growth material.
+                    Instructions:
+                    - Be highly faithful to the actual topic, theme, and key insights of the video (e.g., economics, macro-trends, financial investment, lifestyle, technical, or personal growth advice).
+                    - Create a comprehensive strategic report that translates this specific topic into practical, highly relevant business or entrepreneurial lessons.
+                    - CRITICAL RULE: DO NOT force a USANA connection if the video topic is unrelated (e.g., general macroeconomics, global stock trends, technical engineering). ONLY map or connect it with USANA (such as health products, network business pipelines, autoship/subscription models, or team building) IF AND ONLY IF there is a natural, clear, or logical analogy (e.g., converting passive expenses to income, compound leverage, wellness/prevention habits, subscription-based recurring revenue, or networking/relationship dynamics). Otherwise, focus purely on analyzing the strategic lessons of the video's original message on its own terms.
+                    
                     Format the output with these exact headers and topics:
                     
-                    ■ 유사나 비즈니스 연계 활용법 (HOW TO USE IN USANA)
-                    - 이 강의/상담의 핵심 교훈을 유사나 제품(예: 헬스팩, 영양제 라인업) 제안이나 팀 비즈니스 비전 공유에 어떻게 연계시킬 것인가
+                    ■ 핵심 비즈니스 연계 및 활용 방안 (STRATEGIC APPLICATION)
+                    - 이 강의/상담의 핵심 교훈을 비즈니스 제안, 고객 맞춤형 가치 공유, 혹은 실용적 전략 적용에 어떻게 접목할 것인가 (유사나와의 자연스럽고 합리적인 접점이 발견되는 경우만 유사나 제품/사업 가치와 세련되게 연결)
                     
-                    ■ 실전 초대 멘트 & 소통 템플릿 (RECRUITING COPY)
-                    - 이 스크립트 주제를 바탕으로 가볍게 지인에게 전송하거나 미팅에 초대할 수 있는 고효율 멘트 복사본 작성
+                    ■ 실전 소통 멘트 & 초대 템플릿 (COMMUNICATION COPY)
+                    - 이 스크립트 주제를 바탕으로 오해나 거부감 없이 세련되게 지인에게 전송하거나 소그룹 미팅에 대화 소재로 공유할 수 있는 고효율 메시지 템플릿 작성 (강제의 느낌이 없고 원본 영상의 유용한 영감을 전달하는 형태)
                     
-                    ■ 팀 복제 및 교육 활용 세부 전략 (TEAM PLAYBOOK)
-                    - 다운라인 파트너 리더십 육성, 오토십(정기구독) 활성화 및 복제로 비즈니스 안전 자산을 설계하는 전술
+                    ■ 복제 및 교육 활용 세부 전략 (PLAYBOOK & REPLICATION)
+                    - 파트너들과 이 지식을 소통하고 교육적 가치로 복제하며, 비즈니스를 단단하게 설계하거나 구독 기반 자산 인프라를 견인하기 위한 전술
                     
                     Use professional business Korean. Do NOT add any intro or conversation.
                 """.trimIndent()
                 
                 val strategy = callGemini(apiKey, promptStrategy)
   
-                // Prompt 4: Processed Data and Customized Selling Plan
+                // Prompt 4: Processed Data and Customized Action Sheet
                 val promptProcessed = """
-                    You are a master direct-sales copywriter and business coach for Usana.
-                    Create a customized business action sheet based on this transcript:
+                    You are a master business copywriter, communication mentor, and growth coach.
+                    Analyze the following transcript:
                     $transcript
                     
-                    Format the output with these exact headers to construct what other users will refer to as 'Customized Selling Sheet':
+                    Instructions:
+                    - Build a customized business and marketing action sheet based strictly on the transcript context.
+                    - CRITICAL RULE: DO NOT force direct-selling USANA product scripts or MLM sales arguments if the video's content does not naturally match them (e.g., interest rate policies, market cycles, productivity tools). Focus on objection handling, messaging templates, and social prompts that are faithful to the original topic, helping the user share this video's deep insights with partners/clients as a valuable professional partner. ONLY connect to USANA wellness or business model if the video naturally relates to health habits, network leverage, or recurring passive income pipelines.
                     
-                    ■ 1: 맞춤형 거절 극복 대본 (Objection Handling Script)
-                    - 이 주제와 주급/제품 제안 시 일어날 수 있는 거절 상황에 대한 강력한 비침투적 반론 극복 화법 스크립트 작성
+                    Format the output with these exact headers to construct what other users will refer to as 'Customized Action Sheet':
                     
-                    ■ 2: 파트너/고객 전송용 감사 카카오톡 톡다운 템플릿 (Follow-up Message Templates)
-                    - 미팅 후나 영상 링크를 상대에게 공유한 뒤 마음을 움직일 수 있도록 즉시 복사해서 보낼 수 있는 메시지
+                    ■ 1: 맞춤형 거부 극복 및 소통 대본 (Objection Handling Script)
+                    - 이 주제(예: 불확실한 경제 현실 대비 필요성, 꾸준한 습관 형성의 어려움 등)에 관해 파트너 혹은 지인과 대화 시 일어날 수 있는 거부감이나 이견에 대한 강력하고 비침투적인 대화 극복 스크립트 작성
                     
-                    ■ 3: 인스타그램 릴스/카드뉴스 업로드용 카피라이팅 가이드 (SNS Copywriting Guides)
-                    - 관련 카드뉴스 디자인이나 콘텐츠 생성 시 적용할 수 있는 릴스 아이디어 및 피드 캡션 리스트 작성
+                    ■ 2: 파트너/고객 전송용 감사 및 인사 메시지 템플릿 (Follow-up Message Templates)
+                    - 미팅 혹은 영상 링크를 지인이나 파트너에게 가치를 전달하며 친근하게 전송하고 자연스런 피드백을 물어볼 수 있도록 즉시 복사해서 쓸 수 있는 정중한 카톡/문자 템플릿
                     
-                    ■ 4: 3분 사업 스피치 및 다운라인 교육 교안 (3-Min Pitch & Training Draft)
-                    - 해당 주제를 3분 이내로 핵심만 요약 스피치하거나 홈미팅에서 함께 토론하기 위한 가이드라인 교안
+                    ■ 3: SNS 및 멀티미디어 업로드용 카피라이팅 가이드 (SNS Copywriting Guides)
+                    - 이 주제의 핵심 인사이너티를 인스타그램 릴스, 카드뉴스, 또는 블로그 글귀 등으로 유익하게 업로드하여 퍼스널 브랜딩을 강화할 수 있는 참신한 카드 콘텐츠 아이디어 및 캡션 문구 가이드
+                    
+                    ■ 4: 3분 사업 스피치 및 핵심 토론 교안 (3-Min Pitch & Study Draft)
+                    - 해당 주제를 3분 이내로 명확하게 브리핑하거나 홈미팅/지기 모임에서 파트너들과 함께 마인드셋 성장을 위해 생산적인 미팅을 나누기 위한 스피치 대형 및 토론 가이드라인
                     
                     Use persuasive copywriting in Korean.
                 """.trimIndent()
@@ -377,10 +391,10 @@ object StrategicAnalyst {
                 )
             } catch (e: Exception) {
                 Log.e("StrategicAnalyst", "Failed to analyze with Gemini, falling back to simulation", e)
-                fallbackToSimulation(finalTitle, seed, finalSpeaker, source, folderId, targetLang, isDialogue)
+                fallbackToSimulation(finalTitle, seed, finalSpeaker, source, folderId, targetLang, isDialogue, customTranscript)
             }
         } else {
-            fallbackToSimulation(finalTitle, seed, finalSpeaker, source, folderId, targetLang, isDialogue)
+            fallbackToSimulation(finalTitle, seed, finalSpeaker, source, folderId, targetLang, isDialogue, customTranscript)
         }
     }
 
@@ -391,9 +405,10 @@ object StrategicAnalyst {
         source: String,
         folderId: Int?,
         targetLang: String,
-        isDialogue: Boolean
+        isDialogue: Boolean,
+        customTranscript: String? = null
     ): Lecture {
-        val simData = generateSimulationData(finalTitle, seed, finalSpeaker, source, isDialogue)
+        val simData = generateSimulationData(finalTitle, seed, finalSpeaker, source, isDialogue, customTranscript)
         
         var simTranscript = simData.transcript
         var simSummary = simData.summary
@@ -464,7 +479,7 @@ object StrategicAnalyst {
         return null
     }
 
-    private fun fetchYoutubeTranscript(videoUrl: String): String? {
+    fun fetchYoutubeTranscript(videoUrl: String): String? {
         try {
             val videoId = extractVideoId(videoUrl) ?: return null
             val watchUrl = "https://www.youtube.com/watch?v=$videoId"
@@ -505,158 +520,194 @@ object StrategicAnalyst {
             if (tConn.responseCode != 200) return null
             
             val tJson = tConn.inputStream.bufferedReader(charset("UTF-8")).use { it.readText() }
-            val jsonObj = org.json.JSONObject(tJson)
-            val events = jsonObj.optJSONArray("events") ?: return null
-            
             val sb = java.lang.StringBuilder()
-            for (i in 0 until events.length()) {
-                val event = events.optJSONObject(i) ?: continue
-                val segs = event.optJSONArray("segs") ?: continue
-                val startMs = event.optLong("tStartMs", 0L)
-                
-                val textBuilder = java.lang.StringBuilder()
-                for (j in 0 until segs.length()) {
-                    val seg = segs.optJSONObject(j) ?: continue
-                    val text = seg.optString("utf8", "")
-                    textBuilder.append(text)
-                }
-                
-                val lineText = textBuilder.toString().trim()
-                if (lineText.isNotEmpty()) {
-                    val totalSeconds = startMs / 1000
-                    val minutes = totalSeconds / 60
-                    val seconds = totalSeconds % 60
-                    val timestamp = String.format("[%02d:%02d]", minutes, seconds)
-                    sb.append("$timestamp $lineText\n")
-                }
+            val patternSegment = java.util.regex.Pattern.compile("\"utf8\":\"([^\"]*)\"")
+            val matcher = patternSegment.matcher(tJson)
+            while (matcher.find()) {
+                val text = matcher.group(1)
+                    .replace("\\n", " ")
+                    .replace("\\\"", "\"")
+                sb.append(text).append(" ")
             }
-            return sb.toString().trim()
+            val result = sb.toString().trim()
+            return if (result.isNotEmpty()) result else null
         } catch (e: Exception) {
             e.printStackTrace()
             return null
         }
     }
 
-    data class SimulationResult(
-        val transcript: String,
-        val summary: String,
-        val strategy: String,
-        val processedData: String
-    )
-
     private fun generateSimulationData(
         title: String,
         seed: String,
         speaker: String,
         source: String,
-        isDialogue: Boolean = false
+        isDialogue: Boolean = false,
+        customTranscript: String? = null
     ): SimulationResult {
         val isDiet = seed.contains("다이어트") || seed.contains("디톡스") || seed.contains("체중") || seed.contains("슬림") || seed.contains("diet")
         val isHealth = seed.contains("건강") || seed.contains("영양") || seed.contains("비타민") || seed.contains("헬스팩") || seed.contains("health") || seed.contains("nutrition")
         val isComp = seed.contains("보상") || seed.contains("수당") || seed.contains("수익") || seed.contains("돈") || seed.contains("주급") || seed.contains("사업")
+        val isEconomy = seed.contains("경제") || seed.contains("금리") || seed.contains("주식") || seed.contains("재정") || seed.contains("자산") || seed.contains("투자") || seed.contains("재테크") || seed.contains("금융") || seed.contains("시장") || seed.contains("부동산") || seed.contains("money") || seed.contains("finance") || seed.contains("business") || seed.contains("economy") || title.contains("경제") || title.contains("금리") || title.contains("투자") || title.contains("자산") || title.contains("재테크") || title.contains("금융") || title.contains("재정")
         
         val topicSubject = when {
             isDiet -> "유사나 28일 디톡스 다이어트 챌린지 및 완벽 비움 영양 솔루션"
             isHealth -> "프리미엄 헬스팩 세포 영양 및 고효율 활력 건강 솔루션"
             isComp -> "유사나 무부채 3BC 바이너리 마케팅 보상 플랜과 주급 구축"
+            isEconomy -> "거시 경제 트렌드 분석 및 지속적 현금 흐름(인컴 파이프라인) 구축"
             else -> "유사나 비즈니스 브랜드 가치 확장 및 파워 팀 빌딩"
         }
         
-        val customTranscript = if (isDialogue) {
+        val customTranscriptText = if (!customTranscript.isNullOrBlank()) {
+            customTranscript
+        } else if (isDialogue) {
+            if (isEconomy) {
+                """
+                    [00:00] [$speaker]: 안녕하세요 사장님, 오늘 "$title" 주제 경제 세미나 관련 1:1 디스커션 미팅입니다. 최근 경제 시장 변동이나 자산 관리에 어떤 비전을 구상 중이신가요?
+                    [01:00] [고객]: 네, 인플레이션 때문에 단순 근로 소득의 가치 하락 우려가 커 서브 수입 파이프라인을 다변화하고 싶지만, 초기 자본 리스크나 불안정성 때문에 망설이고 있습니다.
+                    [02:00] [$speaker]: 정말 현명한 진단이십니다. 현대 시장 불안정기일수록 고자본 투자보다는, 내가 매월 지출하는 생필품 브랜드 체인지 같은 플랫폼 연계로 일종의 '구독형 자산 소득'인 마르지 않는 마크로 파이프라인을 구축하는 것이 진정한 위기 관리의 출발점입니다.
+                """.trimIndent()
+            } else {
+                """
+                    [00:00] [$speaker]: 안녕하세요 사장님, 오늘 "$title" 주제 관련 고효율 일대일 상담 미팅입니다. 최근에 고민 있으신 부분에 대해 편하게 말씀해주세요.
+                    [01:00] [고객]: 네, 평소에 면역력도 떨어지고 늘 피곤해서 고민입니다. 다른 분들이 제품 추천을 많이 해주시는데 정작 저한테 맞는 걸 찾기가 어렵더라고요.
+                    [02:00] [$speaker]: 그러셨군요! 그 고민은 정말 자연스러운 것입니다. 시중에 참 많은 건강 솔루션이 있지만, 가장 중요한 것은 우리 몸의 가장 기본 단위인 세포의 수용체가 성분을 정확히 받아서 활용할 수 있도록 돕는 세포 과학 배합 설계입니다.
+                """.trimIndent()
+            }
+        } else {
+            if (isEconomy) {
+                """
+                    [00:00] [$speaker]: 금일 강연은 자산의 불확실성을 극복하는 잉여 권리 인컴 파이프라인의 핵심 설계도입니다. 단순 노동 소득의 굴레에서 벗어나기 위해서는 소비가 곧 소득의 자산 권리로 연계되는 구독 경제 결합 모델이 유일무이한 출구이자 해답입니다.
+                    [05:00] [$speaker]: 대기업의 대규모 유통 인프라처럼, 우리 평범한 개인도 브랜드 소비 체인지를 통해 자가 복제 가능한 마케팅 파이프라인(유사나 오토십 플랜)을 구축해 안정적이고 신뢰도 높은 달러 연금을 소유할 수 있습니다. 
+                    [10:00] [$speaker]: 진정한 웰빙과 안정은 노동 소득에서 나오는 게 아니라, 단단히 가꾼 멤버십 시스템 기반 자산에서 나옵니다. 여러분의 평생 2차 소득 자산 로드맵을 함께 성공적으로 그려냅시다.
+                """.trimIndent()
+            } else {
+                """
+                    [00:00] [$speaker]: 금일 강연은 최고의 활력과 생체 면역 과학을 선도하는 프리미엄 뉴트리션 로드맵입니다. 현대 환경의 미세 먼지와 불규칙한 식생활 속에서 신체 항상성을 유지하는 것이 무엇보다 중요해진 때입니다.
+                    [05:00] [$speaker]: 수많은 비타민 영양 보충제 중 세포 수준의 정밀한 배합 기술을 기반으로 설계된 올인원 패키지를 정기적으로 수혈하는 것이 가장 완전하고 간편한 활력 유지 처방입니다.
+                    [10:00] [$speaker]: 건강을 잃으면 아무리 탄탄한 비즈니스 플랫폼 자산도 무색해집니다. 완벽한 건강과 재정적 자유라는 두 축을 모두 단단하고 올바르게 세워가는 일상의 리더십을 발휘해봅시다.
+                """.trimIndent()
+            }
+        }
+
+        val customSummary = """
+            ■ 핵심 요약 (EXECUTIVE SUMMARY)
+            본 리포트는 "$title" 내용의 분석을 통하여 강사 "$speaker" 님이 제안한 전문 분석 자료입니다. 
+            거시적 재정 안정을 수립하고, 지속 가능한 성장을 위한 실전 행동 패턴과 소그룹 복제 매뉴얼을 포함하고 있습니다.
+            
+            ■ 핵심포인트 (KEY POINTS)
+            - 신뢰성과 인프라의 중요성: 개인 수준에서 무리한 투자 리스크 없이 안정적 기차 수입 엔진을 구축할 수 있는 가능성을 제시합니다.
+            - 복제 가능한 단순함의 원리: 파트너들과 쉽게 공유하고 현장에서 실현 가능한 단순 교육 중심의 문화를 강조합니다.
+            - 다차원 웰니스 가치 확장: 단순 건강식품 수급을 뛰어넘어, 세포 과학에 기반한 진보된 라이프스타일 솔루션을 제시합니다.
+            
+            ■ 실전 액션플랜 (ACTION PLAN)
+            - [즉시 실행]: 주제 연관 핵심 영상을 단톡방의 주요 파트너 및 타겟 오디언스 그룹에 전송하여 대화의 기반을 조성합니다.
+            - [미라클 연계]: 독서 모임이나 아침 미팅에서 해당 주제의 비전 공유 단계를 실습해보고, 정중한 3자 커뮤니케이션 미팅을 매칭합니다.
+            
+            ■ 미래 예측 인사이트 (INSIGHTS)
+            - 고정형 구독 가치(오토십)를 보유한 주급 기반의 비즈니스가 장기적인 변동성에 맞설 수 있는 유일한 무경계 권리자산의 종착지임.
+        """.trimIndent()
+
+        val customStrategy = if (isEconomy) {
             """
-                [00:00] [$speaker]: 안녕하세요 사장님, 오늘 "$title" 주제 관련 고효율 일대일 상담 미팅입니다. 최근에 고민 있으신 부분에 대해 편하게 말씀해주세요.
-                [01:00] [고객]: 네, 평소에 면역력도 떨어지고 늘 피곤해서 고민입니다. 다른 분들이 제품 추천을 많이 해주시는데 정작 저한테 맞는 걸 찾기가 어렵더라고요.
-                [02:00] [$speaker]: 그러셨군요! 그 고민은 정말 자연스러운 것입니다. 시중에 참 많은 건강 솔루션이 있지만, 가장 중요한 것은 우리 몸의 가장 기본 단위인 세포의 수용체가 성분을 정확히 받아서 활용할 수 있도록 돕는 세포 과학 배합 설계입니다.
+                ■ 1. 실전 소통 및 가치 전달 (STRATEGIC APPLICATION)
+                  - "선배님, 공유드린 거시 경제 분석 내용 참고가 되셨을까요? 결국 핵심은 단일 수입 이상의 서브 파이프라인 안전지대 마련이더라구요. 큰 재정 리스크 없이 건강 웰니스 분야를 기반으로 매월 탄탄한 정기 권리 캐쉬플로우를 가꾸는 구체적인 지도를 편하게 나누고 싶습니다!"
+                  
+                ■ 2. 경제 및 시스템 세미나 미팅 연계 (BUSINESS COOPERATION)
+                  - 거시 위기를 돌파하는 트렌드 교육 공유 시, 대기업의 구독 인프라 모델과 비교해 개인 사업자가 소비를 통해 평생 브랜드 파이프라인(유사나 오토십 정기 플랜 기반 자산)을 세워가는 합리적 마일스톤 제시.
+                  
+                ■ 3. 현설적 가치 비전 상담 (REAL VALUE STUDY)
+                  - 무리하게 제품 홍보를 들이밀지 않고, "일상 지출 필수품들을 최고 품질로 바꾸면서 자연스럽게 소득 플랫폼 대리점으로 기수 연계가 가능한 합리적 투잡 플랜"의 우수성 상담.
             """.trimIndent()
         } else {
             """
-                [00:00] [$speaker]: 오늘 강의는 건강한 세포를 위한 최적의 뉴트리션 섭취 방법론입니다. 우리 세포는 매일 적절한 자극과 영양 신호를 받아야 스스로 올바른 대사 작용을 유지합니다. 
-                [02:00] [$speaker]: 따라서, 단순 가성비를 따지기에 앞서 우리 몸에서 실질적 흡수율을 가지며 장기 기능 활성화를 견인하는 독점적 배합 우위를 면밀히 살필 시점입니다.
+                ■ 1. 실전 초대 멘트 (RECRUITING PITCH)
+                  - "선배님! 최근에 시간은 없고 건강과 부업 파이프라인 관심 있으셨죠? 이번 주 웰니스 세미나에서 세포 과학과 글로벌 상장 브랜드를 기반으로 안전자산을 만드는 지도를 강의하거든요. 가벼운 차 함께하며 제가 배운 비전 제안서를 보여드리고 싶어요!"
+                  
+                ■ 2. 홈미팅 활용법 (HOME MEETING)
+                  - '토양 미네랄 고갈 실태'와 '뉴트리션 패키지'를 시각 자료로 게시하고 소그룹 제품 테스트(헬스팩, 뉴트리밀 쉐이크 시음)를 곁들인 체험형 홈미팅을 매주 화요일 개설.
+                  
+                ■ 3. 제품 상담 활용법 (PRODUCT SALES CONSULTATION)
+                  - "우리가 매일 먹는 식사만으로는 세포 자가 면역에 빈자리가 생겨요. 국가 협회가 공인하고 전문 스포츠 선수가 매달 섭취 중인 올인원 섭취팩 '헬스팩'으로 세포 수용체를 바로 깨워보세요."
+                  
+                ■ 4. 리더십 교육 활용법 (LEADERSHIP TRAINING)
+                  - Team 내 차세대 리더들을 대상으로, 태도의 힘과 부정 감정 제거 독서 미팅 루틴을 개설하여 매일 아침 단톡방에 제품 섭취 샷 및 미라클 모닝 공유.
+                  
+                ■ 5. 사업설명회 활용법 (OPP PRESENTATION)
+                  - 뉴욕 증시(NYSE: USNA) 무부채 상장 현황과 인셀리전스 세포 신호 과학의 특허 기술을 사업설명회 전반부에 핵심 강점으로 배치하여 타사 플랜 대비 독점 신뢰도 극대화.
+                  
+                ■ 6. 신규 파트너 교육 활용법 (NEW PARTNER 1·3·7 루틴)
+                  - [1일차]: 유사나 허브(Hub) 앱 설치 및 스마트 오토십 할인 할인 신청법 원격 안내.
+                  - [3일차]: 제품 정기 수령 완료 후 올바른 섭취 시기 및 장 평화 헬스케어 피드백 진행.
+                  - [7일차]: 성장 공동체 비전 세미나 초대 일정 약속 확보 및 스폰서 3자 매칭 대면 상담 성사.
             """.trimIndent()
         }
-        
-        val customSummary = """
-            ■ 핵심 요약 (EXECUTIVE SUMMARY)
-            - 본 리포트는 "$title" 지식을 인공지능 기반 분석 모듈로 정교하게 추출하여 유사나 비즈니스 현장에 가공 정합한 핵심 피드백 리포트입니다.
-            - 핵심 화두: $topicSubject 의 필요성을 일상 속에서 고취하고, 흡수율 및 오토십 구독 사업 모델을 기수 매칭했습니다.
-            
-            ■ 핵심포인트 (KEY POINTS)
-            1. 독점적 기술 우위: 흔하게 파는 저가 영양제가 아닌 세포 신호전달(Incelligence)을 필두로 한 유사나 독자적 우수성 입증.
-            2. 자가 소비 구독 체계화: 정기 할인 혜택을 이용하여 소비자들이 매주 스마트 오토십을 통해 평생 소비자로 남을 수 있도록 정기 관리.
-            3. 재정 비전 전환: 단순 건강 관리를 넘어서 다중 비즈니스 센터(3BC) 연동 플랜을 활성화하여 안정적이고 지속가능한 연금 자산 도출.
-            
-            ■ 실천 액션플랜 (ACTION PLAN)
-            - [오늘 바로] 강의 관련 핵심 카드가 담긴 디톡스/영양 교육 카드 뉴스를 다운라인 파트너 단톡방에 배포.
-            - [3일 이내] 뉴트리션 프리미엄 가이드북을 준비하여 기존 저가 비타민 섭취 지인 2명에게 '세포 생체 이용률 정밀 비교 상담' 약속 성사.
-            - [7일 이내] 초대 대상자 3인의 투잡 고민 유형(직장인, 주부, 은퇴 등)을 세분화하여 유사나 1:1 맞춤형 보상 플랜 멘토링 연출 세팅.
-            
-            ■ 미래 예측 인사이트 (INSIGHTS)
-            - 건강에 대한 우려는 이제 치료가 아닌 '자가 면역 세포 예방' 패러다임으로의 완벽한 이동.
-            - 현대의 구독 라이프스타일과 부합하는 유사나 오토십(Autoship)이야말로 웰니스 분야 중 평생 상속 가능한 무경계 권리자산의 종착지임.
-        """.trimIndent()
-        
-        val customStrategy = """
-            ■ 1. 실전 초대 멘트 (RECRUITING PITCH)
-              - "선배님! 최근에 시간은 없고 건강과 부업 파이프라인 관심 있으셨죠? 이번 주 웰니스 세미나에서 세포 과학과 글로벌 상장 브랜드를 기반으로 안전자산을 만드는 지도를 강의하거든요. 가벼운 차 함께하며 제가 배운 비전 제안서를 보여드리고 싶어요!"
-              
-            ■ 2. 홈미팅 활용법 (HOME MEETING)
-              - '토양 미네랄 고갈 실태'와 '뉴트리션 패키지'를 시각 자료로 게시하고 소그룹 제품 테스트(헬스팩, 뉴트리밀 쉐이크 시음)를 곁들인 체험형 홈미팅을 매주 화요일 개설.
-              
-            ■ 3. 제품 상담 활용법 (PRODUCT SALES CONSULTATION)
-              - "우리가 매일 먹는 식사만으로는 세포 자가 면역에 빈자리가 생겨요. 국가 협회가 공인하고 전문 스포츠 선수가 매달 섭취 중인 올인원 섭취팩 '헬스팩'으로 세포 수용체를 바로 깨워보세요."
-              
-            ■ 4. 리더십 교육 활용법 (LEADERSHIP TRAINING)
-              - 팀 내 차세대 리더들을 대상으로, 태도의 힘과 부정 감정 제거 독서 미팅 루틴을 개설하여 매일 아침 단톡방에 제품 섭취 샷 및 미라클 모닝 공유.
-              
-            ■ 5. 사업설명회 활용법 (OPP PRESENTATION)
-              - 뉴욕 증시(NYSE: USNA) 무부채 상장 현황과 인셀리전스 세포 신호 과학의 특허 기술을 사업설명회 전반부에 핵심 강점으로 배치하여 타사 플랜 대비 독점 신뢰도 극대화.
-              
-            ■ 6. 신규 파트너 교육 활용법 (NEW PARTNER 1·3·7 루틴)
-              - [1일차]: 유사나 허브(Hub) 앱 설치 및 스마트 오토십 할인 할인 신청법 원격 안내.
-              - [3일차]: 제품 정기 수령 완료 후 올바른 섭취 시기 및 장 평화 헬스케어 피드백 진행.
-              - [7일차]: 성장 공동체 비전 세미나 초대 일정 약속 확보 및 스폰서 3자 매칭 대면 상담 성사.
-        """.trimIndent()
-        
-        val customProcessed = """
-            ■ [고객용 콘텐츠 (FOR CUSTOMERS)]
-            
-              - ✍️ 블로그 포스팅:
-                제목: "매일 건강식품을 먹어도 만성 피로인 뜻밖의 원인: 세포 무감각증 타파"
-                본문: "현대인들에게 진짜 필요한 건 세포 수준의 흡수율입니다. GMP 1등급 시설에서 생산되고 세계 뉴트리션 가이드북 1위를 질주하는 프리미엄 종합팩의 세포 배합 원자 기술을 소개합니다..."
+
+        val customProcessed = if (isEconomy) {
+            """
+                ■ [일반 가치 공유용 리소스 (FOR GENERAL AUDIENCE)]
                 
-              - 💬 카카오톡 전송 문구:
-                "선후배님! 현대 토양 오염으로 사과 속 고효율 비타민이 다 거덜 났대요. 세포 수용체까지 정밀 투입되는 고함량 영양 올인원 '헬스팩' 추천드려봐요. 스마트 하루 한 포로 에너지 가득 채워보아용!"
+                  - ✍️ 블로그 및 정보 공유 포스팅:
+                    제목: "인플레이션 폭풍 속에서 안전한 나만의 캐쉬플로우 기초 다지기"
+                    본문: "단순히 지출을 줄이는 절약만으로는 시대의 경제 흐름을 헤쳐갈 수 없습니다. 내가 꼭 써야 하는 생활용품 소비를 소득 전환 시스템과 긴밀하게 매칭한 똑똑한 파이프라인의 핵심 전략을 소개합니다..."
+                    
+                  - 💬 정중한 전송 메시지:
+                    "사장님, 일전 경제 분석 영상 정리 글을 참고삼아 적어 보았습니다. 불확실성이 많을수록 위험 높은 주가 베팅보단, 작은 브랜드 소비 루트 하나로 정기 시스템을 직접 만드는 지혜가 필수라고 하네요. 저 역시 이런 기조로 똑 소리 나는 플랫폼을 연구하고 있는데 시간 나실 때 가벼운 통기 나누어 보아요!"
+                    
+                  - 📸 인스타그램 카드뉴스 기획 & 프롬프트:
+                    #트렌드포커스 #재정파이프라인 #경제트렌드 #지적으로소비하기 #그로잉업
+                    [구성 내용]: "1. 예고 없이 다가오는 경제 리스크 2. 평범한 급여자가 2차 소득을 지키는 비법 3. 내 소비를 자산 권리로 돌리는 비밀"
                 
-              - 📸 인스타그램 카드뉴스 & 피드 캡션:
-                #세포항산화 #유사나헬스팩 #만성피로 #권리소득 #그로잉업그룹
-                [이미지 컷]: "1. 일반 밥상 영양제의 배신 2. 세포 과학이 찾아낸 최적 ODA 섭취량 3. 헬스팩 한 포의 영양 가치"
-            
-            ■ [사업자용 콘텐츠 (FOR DISTRIBUTORS)]
-            
-              - 🏠 홈미팅 스크립트:
-                "오늘 참석해주신 사장님들 환영합니다! 오늘 우리는 한 병의 영양제 속에 담긴 과학 수치를 함께 비교해보고, 소비를 소득으로 바꾸는 위대하지만 쉬운 유사나 평생 권리 연금 라이프스타일 플랜을 시작해보겠습니다..."
+                ■ [비즈니스 리더십용 리소스 (FOR DISTRIBUTORS)]
                 
-              - 🎙️ 세미나 3분 스피치 원고:
-                "인생의 파이프라인을 구축하지 않으면 우리는 죽을 때까지 일하는 평생 노동에서 한 걸음도 비껴설 수 없습니다. 유사나 3BC 멀티 대리점 매장과 제품 소비의 마법으로 저는 한 주마다 달러 연금 보너스를 받고 있습니다..."
+                  - 🏠 스터디 및 미팅 스크립트:
+                    "오늘 참석해주신 사장님들 반갑습니다! 오늘은 최신 경제 분석 통찰을 배경으로, 우리가 단순히 영양제를 구매하는 행위를 넘어 이를 어떻게 불황에도 주마다 달러 연금 배당이 나오는 플랫폼 자산으로 승화시킬 것인지 실전 지혜를 공유해보겠습니다..."
+                    
+                  - 🎙️ 3분 스피치 피칭 원고:
+                    "진정한 리더는 트렌드를 먼저 보고 단단한 기둥을 준비합니다. 전 세계적 웰니스 소비 활기가 직접 유통망과 결속될 때 발생하는 소득의 레버리지는 우리의 내일을 자유롭게 만들 연금입니다..."
+            """.trimIndent()
+        } else {
+            """
+                ■ [고객용 콘텐츠 (FOR CUSTOMERS)]
                 
-              - 📘 팀 교육자료 원고:
-                "복제의 전제 조건은 절대적 단순함입니다. 제품 개봉, 오토십 장바구니 활성화, 그리고 성장 교육 시스템에 100% 안착하는 세 자지만 실천한다면 누구나 한 주마다 누적 소득의 주인공이 됩니다..."
-            
-            ■ [유튜브 콘텐츠 (FOR YOUTUBE)]
-            
-              - 🎥 Shorts 쇼츠 대본 (60초):
-                "일 안 해도 매달 통장에 꽂히는 돈, 평생 받는 영양제 비법 궁금하시죠? 답은 세포 건강과 유사나 보상플랜입니다! 저가 가성비 비타민 10통보다 세포 특허 기술 1등 영양제가 신체 겉과 속을 완벽히 바꿉니다! 고정 댓글 링크를 확인하세요!"
+                  - ✍️ 블로그 포스팅:
+                    제목: "매일 건강식품을 먹어도 만성 피로인 뜻밖의 원인: 세포 무감각증 타파"
+                    본문: "현대인들에게 진짜 필요한 건 세포 수준의 흡수율입니다. GMP 1등급 시설에서 생산되고 세계 뉴트리션 가이드북 1위를 질주하는 프리미엄 종합팩의 세포 배합 원자 기술을 소개합니다..."
+                    
+                  - 💬 카카오톡 전송 문구:
+                    "선후배님! 현대 토양 오염으로 사과 속 고효율 비타민이 다 거덜 났대요. 세포 수용체까지 정밀 투입되는 고함량 영양 올인원 '헬스팩' 추천드려봐요. 스마트 하루 한 포로 에너지 가득 채워보아용!"
+                    
+                  - 📸 인스타그램 카드뉴스 & 피드 캡션:
+                    #세포항산화 #유사나헬스팩 #만성피로 #권리소득 #그로잉업그룹
+                    [이미지 컷]: "1. 일반 밥상 영양제의 배신 2. 세포 과학이 찾아낸 최적 ODA 섭취량 3. 헬스팩 한 포의 영양 가치"
                 
-              - 🏷️ 고클릭 썸네일 문구:
-                "의사들이 몰래 먹는 평생 세포 영양제! ₩0원으로 대리점 3개 차리는 파이프라인 법 공개!"
+                ■ [사업자용 콘텐츠 (FOR DISTRIBUTORS)]
                 
-              - 📝 영상 기획안 및 연출 대본:
-                [인트로화면]: 활기찬 미소의 사업자가 헬스팩 한 포를 따먹으며 활력 충전.
-                [나레이션]: "왜 같은 나이인데 누구는 만성 활력 피로를 달고 살고, 누구는 주말 세미나에서도 돋보일까요? 바로 세포 항산화 신호가 달라서입니다..."
-        """.trimIndent()
+                  - 🏠 홈미팅 스크립트:
+                    "오늘 참석해주신 사장님들 환영합니다! 오늘 우리는 한 병의 영양제 속에 담긴 과학 수치를 함께 비교해보고, 소비를 소득으로 바꾸는 위대하지만 쉬운 유사나 평생 권리 연금 라이프스타일 플랜을 시작해보겠습니다..."
+                    
+                  - 🎙️ 세미나 3분 스피치 원고:
+                    "인생의 파이프라인을 구축하지 않으면 우리는 죽을 때까지 일하는 평생 노동에서 한 걸음도 비껴설 수 없습니다. 유사나 3BC 멀티 대리점 매장과 제품 소비의 마법으로 저는 한 주마다 달러 연금 보너스를 받고 있습니다..."
+                    
+                  - 📘 팀 교육자료 원고:
+                    "복제의 전제 조건은 절대적 단순함입니다. 제품 개봉, 오토십 장바구니 활성화, 그리고 성장 교육 시스템에 100% 안착하는 세 자지만 실천한다면 누구나 한 주마다 누적 소득의 주인공이 됩니다..."
+                
+                ■ [유튜브 콘텐츠 (FOR YOUTUBE)]
+                
+                  - 🎥 Shorts 쇼츠 대본 (60초):
+                    "일 안 해도 매달 통장에 꽂히는 돈, 평생 받는 영양제 비법 궁금하시죠? 답은 세포 건강과 유사나 보상플랜입니다! 저가 가성비 비타민 10통보다 세포 특허 기술 1등 영양제가 신체 겉과 속을 완벽히 바꿉니다! 고정 댓글 링크를 확인하세요!"
+                    
+                  - 🏷️ 고클릭 썸네일 문구:
+                    "의사들이 몰래 먹는 평생 세포 영양제! ₩0원으로 대리점 3개 차리는 파이프라인 법 공개!"
+                    
+                  - 📝 영상 기획안 및 연출 대본:
+                    [인트로화면]: 활기찬 미소의 사업자가 헬스팩 한 포를 따먹으며 활력 충전.
+                    [나레이션]: "왜 같은 나이인데 누구는 만성 활력 피로를 달고 살고, 누구는 주말 세미나에서도 돋보일까요? 바로 세포 항산화 신호가 달라서입니다..."
+            """.trimIndent()
+        }
 
         return SimulationResult(
-            transcript = customTranscript,
+            transcript = customTranscriptText,
             summary = customSummary,
             strategy = customStrategy,
             processedData = customProcessed
@@ -687,3 +738,11 @@ object StrategicAnalyst {
         }
     }
 }
+
+data class SimulationResult(
+    val transcript: String,
+    val summary: String,
+    val strategy: String,
+    val processedData: String
+)
+

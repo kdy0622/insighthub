@@ -947,8 +947,10 @@ fun TransformTab(
     val title by viewModel.inputTitle.collectAsStateWithLifecycle()
     val source by viewModel.inputSource.collectAsStateWithLifecycle()
     val speaker by viewModel.inputSpeaker.collectAsStateWithLifecycle()
+    val inputTranscript by viewModel.inputTranscript.collectAsStateWithLifecycle()
     val selFolderId by viewModel.selectedFolderId.collectAsStateWithLifecycle()
     val selLanguage by viewModel.selectedLanguage.collectAsStateWithLifecycle()
+    val isApiKeyActive by viewModel.isGeminiApiKeyActive.collectAsStateWithLifecycle()
 
     val isTranscribing by viewModel.isTranscribing.collectAsStateWithLifecycle()
     val progress by viewModel.transcriptionProgress.collectAsStateWithLifecycle()
@@ -1007,7 +1009,98 @@ fun TransformTab(
             color = Color.Gray
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Key Indicator Banner & API Key Input
+        var isKeyInputExpanded by remember { mutableStateOf(!isApiKeyActive) }
+        var tempApiKeyInput by remember { mutableStateOf(viewModel.getSavedGeminiApiKey(context)) }
+
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isApiKeyActive) Color(0xFFE8F5E9) else Color(0xFFFFF3E0)
+            ),
+            border = BorderStroke(1.dp, if (isApiKeyActive) Color(0xFF81C784) else Color(0xFFFFB74D)),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = if (isApiKeyActive) Icons.Default.CheckCircle else Icons.Default.VpnKey,
+                        contentDescription = null,
+                        tint = if (isApiKeyActive) Color(0xFF2E7D32) else Color(0xFFE65100),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (isApiKeyActive) "🟢 Gemini AI 실시간 분석 활성화 완료" else "⚠️ 체험 시뮬레이션(가상 리액션) 상태",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = if (isApiKeyActive) Color(0xFF2E7D32) else Color(0xFFE65100),
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(
+                        onClick = { isKeyInputExpanded = !isKeyInputExpanded },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isKeyInputExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = null,
+                            tint = if (isApiKeyActive) Color(0xFF2E7D32) else Color(0xFFE65100)
+                        )
+                    }
+                }
+
+                if (isKeyInputExpanded) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "구글 AI 스튜디오에서 발급받은 Gemini API 키를 등록해 보세요. 등록 즉시 정해진 가상의 시뮬레이션 데이터를 벗어나, 실제 사용자가 업로드한 유튜브 영상이나 대본 자막을 100% 정교하고 입체적으로 실시간 맞춤 분석합니다.",
+                        fontSize = 11.sp,
+                        color = if (isApiKeyActive) Color(0xFF1B5E20) else Color(0xFF5D4037),
+                        lineHeight = 15.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = tempApiKeyInput,
+                            onValueChange = { tempApiKeyInput = it },
+                            placeholder = { Text("AIzaSy... (API Key)") },
+                            singleLine = true,
+                            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                            modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = UsanaNavy,
+                                unfocusedBorderColor = Color(0xFFB0BEC5),
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White
+                            ),
+                            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp)
+                        )
+                        Button(
+                            onClick = {
+                                val key = tempApiKeyInput.trim()
+                                viewModel.saveGeminiApiKey(context, key)
+                                isKeyInputExpanded = false
+                                Toast.makeText(context, "API Key 가 성공적으로 설정되었습니다!", Toast.LENGTH_SHORT).show()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = UsanaNavy),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("적용/저장", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -1081,6 +1174,19 @@ fun TransformTab(
                     placeholder = { Text("예: 세포 보충과 만성 피로 타파 전략 (미입력시 자동생성)") },
                     modifier = Modifier.fillMaxWidth(),
                     leadingIcon = { Icon(Icons.Default.Title, contentDescription = null, tint = UsanaNavy) }
+                )
+
+                // Paste transcript text field
+                OutlinedTextField(
+                    value = inputTranscript,
+                    onValueChange = { viewModel.inputTranscript.value = it },
+                    label = { Text("자막 또는 녹취록 대본 직접 붙여넣기 (선택사항/강력추천)") },
+                    placeholder = { Text("인쇄된 대본이나 유튜브 자막 텍스트를 여기에 직접 붙여넣으세요. 기기 오디오 음원 무음 분석 오류나 유튜브 외부 서버 자막 차단 문제를 완벽하게 회피하여 100% 정교한 유사나 전술 보고서를 산출합니다.") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(130.dp),
+                    maxLines = 6,
+                    leadingIcon = { Icon(Icons.Default.Description, contentDescription = null, tint = UsanaNavy) }
                 )
 
                 Column(
@@ -2060,6 +2166,62 @@ fun AdminPortalView(
                     fontSize = 11.sp,
                     lineHeight = 16.sp
                 )
+            }
+        }
+
+        // Section 0: Gemini API Key Config inside Admin Portal
+        val isApiKeyActive by viewModel.isGeminiApiKeyActive.collectAsStateWithLifecycle()
+        var tempAdminKeyInput by remember { mutableStateOf(viewModel.getSavedGeminiApiKey(context)) }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            border = BorderStroke(1.dp, if (isApiKeyActive) Color(0xFF81C784) else UsanaOutline),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = if (isApiKeyActive) Icons.Default.CheckCircle else Icons.Default.VpnKey,
+                        contentDescription = null,
+                        tint = if (isApiKeyActive) Color(0xFF2E7D32) else UsanaNavy,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "⚙️ Gemini AI 시스템 라이브 연동 제어 (API Key)",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = UsanaNavy
+                    )
+                }
+                Text(
+                    text = "앱의 실시간 AI 보고서 분석 기능을 처리할 수 있는 최고 관리자용 Gemini API 키입니다. 비밀번호 수정처럼 간편하게 키값을 등록하고 실시간 연동을 제어할 수 있습니다.",
+                    fontSize = 11.sp,
+                    color = Color.Gray
+                )
+                OutlinedTextField(
+                    value = tempAdminKeyInput,
+                    onValueChange = { tempAdminKeyInput = it },
+                    label = { Text("Gemini API Key 등록") },
+                    placeholder = { Text("AIzaSy...") },
+                    singleLine = true,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                    leadingIcon = { Icon(Icons.Default.VpnKey, null, tint = UsanaNavy) }
+                )
+                Button(
+                    onClick = {
+                        val trimmed = tempAdminKeyInput.trim()
+                        viewModel.saveGeminiApiKey(context, trimmed)
+                        Toast.makeText(context, "최고 관리자 대시보드에서 Gemini API Key 가 유효화되었습니다!", Toast.LENGTH_LONG).show()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = UsanaNavy)
+                ) {
+                    Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("AI 시스템 API 키 적용 및 상태 저장", fontWeight = FontWeight.Bold)
+                }
             }
         }
 
