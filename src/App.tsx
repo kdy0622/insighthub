@@ -284,11 +284,6 @@ export default function App() {
 
   // Start analysis trigger
   const triggerAnalysis = async () => {
-    if (!transformTitle.trim()) {
-      alert("지식 강의 제목을 적어주세요!");
-      return;
-    }
-
     if (creditsUsed >= creditLimit) {
       alert(`AI 사용 한도(${creditLimit}회)를 초과했습니다. 높은 등급의 플랜으로 업그레이드 하세요!`);
       return;
@@ -298,7 +293,9 @@ export default function App() {
     setAnalysisProgress(5);
     setAnalysisLogs(["[시스템] AI 엔진 초기화 중..."]);
 
-    const finalTitle = transformTitle;
+    const finalTitle = transformTitle.trim() 
+      ? transformTitle.trim() 
+      : (transformSpeaker.trim() ? `${transformSpeaker} 리더의 유사나 특강` : "신규 지식 분석 리포트") + ` (${new Date().toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })} ${new Date().toTimeString().slice(0, 5)})`;
     const finalSpeaker = transformSpeaker || "전문 유사나 리더";
     const finalSource = transformSource || "대본 직접 입력";
     const finalTranscript = transformCustomTranscript || `[00:00] 강사: 유사나와 평생 세포 영양을 소개하게 된 ${finalSpeaker}입니다. 현대 건강은 비단 세포 한 개가 정상 소통을 주고받을 때 가치가 실현됩니다. 이것이 유사나 영양 과학의 핵심 포인트입니다.
@@ -794,7 +791,7 @@ export default function App() {
                         placeholder="지식 제목, 강사, 본문 검색..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-slate-855 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-usana-500"
+                        className="w-full bg-slate-800 border border-slate-705 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-usana-500"
                       />
                     </div>
                     {/* Tiny stats */}
@@ -1165,29 +1162,29 @@ export default function App() {
                   {/* Form fields */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-300">강의 / 세미나 지식명 (강제 필수)</label>
+                      <label className="text-xs font-bold text-slate-350">강의 / 세미나 지식명 (선택 입력)</label>
                       <input
                         type="text"
                         placeholder="예) 헬스팩 과학 세미나 1부 개회"
                         value={transformTitle}
                         onChange={(e) => setTransformTitle(e.target.value)}
-                        className="w-full bg-slate-855 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-usana-500"
+                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-usana-500"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-300">원화 연사 / 강사</label>
+                      <label className="text-xs font-bold text-slate-350">원화 연사 / 강사</label>
                       <input
                         type="text"
                         placeholder="예) 이재정 박사, 김유사 골드"
                         value={transformSpeaker}
                         onChange={(e) => setTransformSpeaker(e.target.value)}
-                        className="w-full bg-slate-855 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-usana-500"
+                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-usana-500"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-300 flex items-center gap-1">
+                    <label className="text-xs font-bold text-slate-350 flex items-center gap-1">
                       <Youtube className="w-3.5 h-3.5 text-rose-500" />
                       YouTube 동영상 주소 (선택 연결)
                     </label>
@@ -1196,18 +1193,18 @@ export default function App() {
                       placeholder="예) https://www.youtube.com/watch?v=..."
                       value={transformSource}
                       onChange={(e) => setTransformSource(e.target.value)}
-                      className="w-full bg-slate-855 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-usana-500"
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-usana-500"
                     />
                   </div>
 
                   {/* Folders and config */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-300">수출 지식 폴더 지정</label>
+                      <label className="text-xs font-bold text-slate-350">수출 지식 폴더 지정</label>
                       <select
                         value={transformFolderId || ''}
                         onChange={(e) => setTransformFolderId(e.target.value ? parseInt(e.target.value, 10) : null)}
-                        className="w-full bg-slate-855 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-usana-500"
+                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-usana-500"
                       >
                         <option value="">지정 안 함 (미보관)</option>
                         {folders.map(f => (
@@ -1217,11 +1214,11 @@ export default function App() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-300">분석 훈련 지목</label>
+                      <label className="text-xs font-bold text-slate-350">분석 훈련 지목</label>
                       <select
                         value={transformIsDialogue ? 'dialogue' : 'lecture'}
                         onChange={(e) => setTransformIsDialogue(e.target.value === 'dialogue')}
-                        className="w-full bg-slate-855 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-usana-500"
+                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-usana-500"
                       >
                         <option value="lecture">일반 강의 / 정보 독백</option>
                         <option value="dialogue">1:1 상담 / 고객 Objection 대화</option>
@@ -1229,11 +1226,11 @@ export default function App() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-300">번역 표적 대상국</label>
+                      <label className="text-xs font-bold text-slate-350">번역 표적 대상국</label>
                       <select
                         value={transformLanguage}
                         onChange={(e) => setTransformLanguage(e.target.value)}
-                        className="w-full bg-slate-855 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-usana-500"
+                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-usana-500"
                       >
                         <option value="ko">한국어 (Default Korean)</option>
                         <option value="en">영어 (English Translation)</option>
@@ -1268,7 +1265,7 @@ export default function App() {
                       placeholder="녹음을 가동하거나, 직접 대본 텍스트를 붙여넣기 하실 수 있습니다. 비어있을 경우 고품격 유사나 스터디 기본 모노로그 템플릿이 기재 제안됩니다."
                       value={transformCustomTranscript}
                       onChange={(e) => setTransformCustomTranscript(e.target.value)}
-                      className="w-full bg-slate-855 border border-slate-800 rounded-lg p-3 text-xs text-slate-300 placeholder-slate-650 focus:outline-none focus:border-usana-500 font-sans"
+                      className="w-full bg-slate-800 border border-slate-705 rounded-lg p-3 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-usana-500 font-sans"
                     ></textarea>
                   </div>
 
@@ -1472,7 +1469,7 @@ export default function App() {
                         placeholder="Google AI Studio에서 발급받은 'AIzaSy...' API 키 기입"
                         value={geminiApiKey}
                         onChange={(e) => setGeminiApiKey(e.target.value)}
-                        className="flex-1 bg-slate-855 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-655 focus:outline-none focus:border-usana-500 font-mono"
+                        className="flex-1 bg-slate-800 border border-slate-705 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-usana-500 font-mono"
                       />
                       <button
                         onClick={() => {
@@ -1498,7 +1495,7 @@ export default function App() {
                         placeholder="설정된 관리자 게이트 비밀번호"
                         value={adminPassword}
                         onChange={(e) => setAdminPassword(e.target.value)}
-                        className="w-full bg-slate-855 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-usana-500 font-mono"
+                        className="w-full bg-slate-800 border border-slate-705 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-usana-500 font-mono"
                       />
                       <button
                         onClick={() => {
@@ -1564,7 +1561,7 @@ export default function App() {
                         value={adminInputPass}
                         onChange={(e) => setAdminInputPass(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleAdminVerify()}
-                        className="flex-1 bg-slate-855 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cellular-rose font-mono"
+                        className="flex-1 bg-slate-800 border border-slate-705 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cellular-rose font-mono"
                       />
                       <button
                         onClick={handleAdminVerify}
@@ -1614,7 +1611,7 @@ export default function App() {
                         rows={3}
                         value={systemInstructions}
                         onChange={(e) => setSystemInstructions(e.target.value)}
-                        className="w-full bg-slate-855 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-350 focus:outline-none focus:border-usana-500"
+                        className="w-full bg-slate-800 border border-slate-705 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-usana-500 font-mono"
                       />
                       <button
                         onClick={() => alert("에이전트 제어 수칙이 성공적으로 프롬프트 레이어에 상주 보존되었습니다.")}
@@ -1704,7 +1701,7 @@ export default function App() {
                   placeholder="예) 헬스팩 성분 깊이 공부"
                   value={newFolderName}
                   onChange={(e) => setNewFolderName(e.target.value)}
-                  className="w-full bg-slate-855 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white uppercase placeholder-slate-500 focus:outline-none focus:border-usana-500"
+                  className="w-full bg-slate-800 border border-slate-705 rounded-lg px-3 py-2 text-xs text-white uppercase placeholder-slate-400 focus:outline-none focus:border-usana-500"
                 />
               </div>
 
