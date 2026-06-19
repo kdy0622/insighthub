@@ -1,21 +1,66 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# 🪐 USANA INSIGHT HUB (유사나 인사이트 허브)
 
-# Run and deploy your AI Studio app
+강의, 세미나, 유튜브, 음성을 자동 분석하여 유사나 사업에 활용 가능한 고부가가치 지식 자산으로 바꿔주는 **AI 비즈니스 통합 플랫폼**입니다.
 
-This contains everything you need to run your app locally.
+이 리포지토리는 **Vercel 웹 앱** 배포를 위한 프론트엔드 환경(React, Vite, Tailwind CSS, TypeScript)과 **안드로이드 네이티브 앱** 환경(Kotlin, Jetpack Compose)이 조화롭게 결합된 융합 플랫폼 프로젝트입니다.
 
-View your app in AI Studio: https://ai.studio/apps/fd7cd0df-0313-4c7f-9110-e7f753e9b231
+---
 
-## Run Locally
+## 🎨 주요 기능 및 가치
 
-**Prerequisites:**  [Android Studio](https://developer.android.com/studio)
+1. **AI 지식 자산 변환기 (Transform)**
+   - 유튜브 영상 주소, 강의 텍스트 대본, 혹은 음성 마이크 녹음 파일을 입력하여 AI 자산으로 분석합니다.
+   - 로딩 과정에서 기전 분석 단계를 화려한 일류 디지털 스캐너 그래픽과 로그로 시각화합니다.
+2. **나의 지식 라이브러리 (Library)**
+   - 자산 폴더(예: 제품 공부, 사업 비전, 거절 극복 등)를 원하는 컬러로 신규 개설 및 삭제할 수 있으며, 지식 보고서를 필터링합니다.
+   - **정밀 스크립트 (Timeline)**: 클릭 시 시뮬레이션 싱크 재생이 가능한 대목별 시간축 녹취 제공.
+   - **요약 리포트 (Summary)**: 핵심 요약, KEY 포인트, 구체 실천 방안, 미래 인텍트 제공.
+   - **유사나 사업 연계 (USANA Guide)**: 마이런 웬츠 박사 세포과학, 헬스팩(InCelligence/올리볼) 영양소의 우수성을 소비자가 정직한 마감 초기화 없는 바이너리 권리소득으로 유기 연상할 수 있는 고품격 비즈니스 전략.
+   - **실전 액션시트 (Action Sheet)**: 카카오톡/문자 전송용 정중 감사 감사장, SNS 릴스/인스타 카피 가이드, 3분 파워 사업 피치 및 홈미팅 교안 수록.
+3. **프리미엄 세일즈 허브 (Premium)**
+   - **인터랙티브 세포 자산 맵(Mindmap)**: 노드를 클릭하며 세포 과학과 보상플랜 구조를 시각 전개하는 3D형 가상 마인드맵.
+   - **정석 소통 카피 뱅크**: 클릭 즉시 전송 카피를 클립보드로 전사하는 고성능 카피라이팅 볼트.
+4. **암호화 API 설정 (Settings)**
+   - 브라우저 로컬 스토리지에 사용자 고유의 Gemini API를 안전히 상주 처리.
+   - 만약 보존된 키가 부재하거나 유효하지 않은 경우, 지극히 현실적이고 깊이 있는 **[유사나 특화 AI 시뮬레이터]**가 구동되어 완벽한 보고서를 초강력 마하 스피드로 출력 보간합니다.
+5. **보안 관리자 포털 (Admin Portal)**
+   - 통제 암호(기본값: `usana123`)로 언락되는 게이트웨이로 실시간 데이터베이스 통합 통계 수치와 에이전트 지시서를 편집할 수 있는 은닉 플랫폼.
 
+---
 
-1. Open Android Studio
-2. Select **Open** and choose the directory containing this project
-3. Allow Android Studio to fix any incompatibilities as it imports the project.
-4. Create a file named `.env` in the project directory and set `GEMINI_API_KEY` in that file to your Gemini API key (see `.env.example` for an example)
-5. Remove this line from the app's `build.gradle.kts` file: `signingConfig = signingConfigs.getByName("debugConfig")`
-6. Run the app on an emulator or physical device
+## 🚀 Vercel 웹 앱 배포 가이드 (Deployment)
+
+본 리포지토리는 루트에 `package.json` 및 Vite 프레임워크 스펙을 지니고 있어, GitHub에 연동 후 클릭 한 번으로 Vercel에 즉시 배포할 수 있습니다.
+
+### 1. Vercel 배포 세팅
+1. **GitHub 리포지토리 푸시**: 본 코드를 개인 깃허브에 보존 수집합니다.
+2. **Vercel 로그인 및 Import**: [Vercel](https://vercel.com) 콘솔에서 `Add New` -> `Project` -> 본 리포지토리를 선택하여 Import 합니다.
+3. **Framework Preset 자동 감지**: Vercel이 **Vite** 또는 **Other** 프로젝트로 자동 감지합니다.
+4. **환경 변수 지정 (선택)**:
+   - 만약 전역에서 공유할 고정 Gemini API Key가 있다면, 환경변수 `VITE_GEMINI_API_KEY`에 등록하셔도 됩니다 (앱 화면 설정에서도 개인 키 등록을 안전히 지원합니다).
+5. **Deploy 클릭**: 30초 내에 전 세계 사용자에게 보급되는 초고속 유사나 인사이트 허브 웹 앱이 탄생합니다!
+
+### 2. 로컬 개발 환경 실행 (Local Run)
+```bash
+# 종속성 라이브러리 일제 설치
+npm install
+
+# 실시간 로컬 컴파일 서빙 실행
+npm run dev
+```
+로컬 접속 테스트: `http://localhost:3000`
+
+---
+
+## 📱 안드로이드 모바일 패키징 (Android APK)
+
+안드로이드용 소스코드는 `app/` 디렉터리에 분리 보존되어 제공됩니다.
+- 본 리포지토리의 Android APK 빌드가 성공적으로 완수되었습니다 (`USANA_Insight_Hub.apk` 완비).
+- 내부적으로 Kotlin Jetpack Compose 및 Room DB 구조가 적용되어 5성 등급 수준의 유기적 모바일 퍼포먼스를 제공합니다.
+
+---
+
+### 🎨 디자인 및 아키텍처 철학 (UI/UX)
+- **Celestial Slate Blue**: 심해와 세포의 이온 흐름을 상징하는 슬레이트 블루 바탕과 티안 에메랄드 그린 컬러 포인트.
+- **Micro-interactions**: 버튼 탭 시 리플 반응과 노드 전환 시 서서히 커지는 애니메이션 세팅.
+- **Responsive Adaptive**: 데스크톱의 여유 있는 사이드 메뉴 및 모바일의 엄지 한 손가락 하단 컨트롤러 동시 정돈 최적화.
